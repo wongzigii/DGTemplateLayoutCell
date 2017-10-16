@@ -16,15 +16,15 @@ class DGIndexPathHeightCache {
     internal var automaticallyInvalidateEnabled: Bool = true
 
     init() {
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(DGIndexPathHeightCache.deviceOrientationDidChange), name: UIDeviceOrientationDidChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(DGIndexPathHeightCache.deviceOrientationDidChange), name: NSNotification.Name.UIDeviceOrientationDidChange, object: nil)
     }
 
     deinit {
-         NSNotificationCenter.defaultCenter().removeObserver(self, name: UIDeviceOrientationDidChangeNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.UIDeviceOrientationDidChange, object: nil)
     }
 
     // MARK: - public
-    subscript(indexPath: NSIndexPath) -> CGFloat? {
+    subscript(indexPath: IndexPath) -> CGFloat? {
         get {
             if indexPath.section < heights.count && indexPath.row < heights[indexPath.section].count {
                 return heights[indexPath.section][indexPath.row]
@@ -32,12 +32,12 @@ class DGIndexPathHeightCache {
             return nil
         }
         set {
-            self.buildIndexPathIfNeeded(indexPath)
+            self.buildIndexPathIfNeeded(indexPath: indexPath)
             heights[indexPath.section][indexPath.row] = newValue!
         }
     }
 
-    internal func invalidateHeightAtIndexPath(indexPath: NSIndexPath) {
+    internal func invalidateHeightAtIndexPath(indexPath: IndexPath) {
         self[indexPath] = -1
     }
 
@@ -45,62 +45,66 @@ class DGIndexPathHeightCache {
         self.heights.removeAll()
     }
 
-    internal func existsIndexPath(indexPath: NSIndexPath) -> Bool {
-        return self[indexPath] != nil && self[indexPath] > -0.0000000001
+    internal func existsIndexPath(indexPath: IndexPath) -> Bool {
+        let n: CGFloat = -0.000001
+        if let indexPath = self[indexPath], indexPath > n {
+            return true
+        }
+        return false
     }
 
-    internal func insertSections(sections: NSIndexSet) {
-        sections.enumerateIndexesUsingBlock({ (index, stop) -> Void in
-            self.buildSectionsIfNeeded(index)
-            self.heights.insert([], atIndex: index)
-        })
+    internal func insertSections(sections: IndexSet) {
+        for (index, _) in sections.enumerated() {
+            self.buildSectionsIfNeeded(targetSection: index)
+            self.heights.insert([], at: index)
+        }
     }
 
-    internal func deleteSections(sections: NSIndexSet) {
-        sections.enumerateIndexesUsingBlock({ (index, stop) -> Void in
-            self.buildSectionsIfNeeded(index)
-            self.heights.removeAtIndex(index)
-        })
+    internal func deleteSections(sections: IndexSet) {
+        for (index, _) in sections.enumerated() {
+            self.buildSectionsIfNeeded(targetSection: index)
+            self.heights.remove(at: index)
+        }
     }
 
-    internal func reloadSections(sections: NSIndexSet) {
-        sections.enumerateIndexesUsingBlock({ (index, stop) -> Void in
-            self.buildSectionsIfNeeded(index)
+    internal func reloadSections(sections: IndexSet) {
+        for (index, _) in sections.enumerated() {
+            self.buildSectionsIfNeeded(targetSection: index)
             self.heights[index] = []
-        })
+        }
     }
 
     internal func moveSection(section: Int, toSection newSection: Int) {
-        self.buildSectionsIfNeeded(section)
-        self.buildSectionsIfNeeded(newSection)
+        self.buildSectionsIfNeeded(targetSection: section)
+        self.buildSectionsIfNeeded(targetSection: newSection)
         swap(&self.heights[section], &self.heights[newSection])
     }
 
-    internal func insertRowsAtIndexPaths(indexPaths: [NSIndexPath]) {
+    internal func insertRowsAtIndexPaths(indexPaths: [IndexPath]) {
         for indexPath in indexPaths {
-            self.buildIndexPathIfNeeded(indexPath)
-            self.heights[indexPath.section].insert(-1, atIndex: indexPath.row)
+            self.buildIndexPathIfNeeded(indexPath: indexPath)
+            self.heights[indexPath.section].insert(-1, at: indexPath.row)
         }
     }
 
-    internal func deleteRowsAtIndexPaths(indexPaths: [NSIndexPath]) {
-        let indexPathSorted = indexPaths.sort { $0.section > $1.section || $0.row > $1.row }
+    internal func deleteRowsAtIndexPaths(indexPaths: [IndexPath]) {
+        let indexPathSorted = indexPaths.sorted { $0.section > $1.section || $0.row > $1.row }
         for indexPath in indexPathSorted {
-            self.buildIndexPathIfNeeded(indexPath)
-            self.heights[indexPath.section].removeAtIndex(indexPath.row)
+            self.buildIndexPathIfNeeded(indexPath: indexPath)
+            self.heights[indexPath.section].remove(at: indexPath.row)
         }
     }
 
-    internal func reloadRowsAtIndexPaths(indexPaths: [NSIndexPath]) {
+    internal func reloadRowsAtIndexPaths(indexPaths: [IndexPath]) {
         for indexPath in indexPaths {
-            self.buildIndexPathIfNeeded(indexPath)
-            self.invalidateHeightAtIndexPath(indexPath)
+            self.buildIndexPathIfNeeded(indexPath: indexPath)
+            self.invalidateHeightAtIndexPath(indexPath: indexPath)
         }
     }
 
-    internal func moveRowAtIndexPath(indexPath: NSIndexPath, toIndexPath newIndexPath: NSIndexPath) {
-        self.buildIndexPathIfNeeded(indexPath)
-        self.buildIndexPathIfNeeded(newIndexPath)
+    internal func moveRowAtIndexPath(indexPath: IndexPath, toIndexPath newIndexPath: IndexPath) {
+        self.buildIndexPathIfNeeded(indexPath: indexPath)
+        self.buildIndexPathIfNeeded(indexPath: newIndexPath)
         swap(&self.heights[indexPath.section][indexPath.row], &self.heights[indexPath.section][indexPath.row])
     }
 
@@ -121,9 +125,9 @@ class DGIndexPathHeightCache {
         }
     }
 
-    private func buildIndexPathIfNeeded(indexPath: NSIndexPath) {
-        self.buildSectionsIfNeeded(indexPath.section)
-        self.buildRowsIfNeeded(indexPath.row, existSextion: indexPath.section)
+    private func buildIndexPathIfNeeded(indexPath: IndexPath) {
+        self.buildSectionsIfNeeded(targetSection: indexPath.section)
+        self.buildRowsIfNeeded(targetRow: indexPath.row, existSextion: indexPath.section)
     }
 
     @objc private func deviceOrientationDidChange() {

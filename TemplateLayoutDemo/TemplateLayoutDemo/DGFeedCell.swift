@@ -18,7 +18,7 @@ class DGFeedCell: UITableViewCell {
 
     override func awakeFromNib() {
         super.awakeFromNib()
-        self.contentView.bounds = UIScreen.mainScreen().bounds
+        self.contentView.bounds = UIScreen.main.bounds
     }
 
     func loadData(item: DGFeedItem) {
@@ -33,14 +33,14 @@ class DGFeedCell: UITableViewCell {
 
     // If you are not using auto layout, override this method, enable it by setting
     // "fd_enforceFrameLayout" to YES.
-    override func sizeThatFits(size: CGSize) -> CGSize {
+    override func sizeThatFits(_ size: CGSize) -> CGSize {
         var height: CGFloat = 0
         height += self.contentLabel.sizeThatFits(size).height
         height += self.contentLabel.sizeThatFits(size).height
         height += self.contentImageView.sizeThatFits(size).height
         height += self.userNameLabel.sizeThatFits(size).height
         height += self.timeLabel.sizeThatFits(size).height
-        return CGSizeMake(size.width, height)
+        return CGSize(width: size.width, height: height)
     }
 
 }

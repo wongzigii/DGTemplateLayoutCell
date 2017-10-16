@@ -13,11 +13,11 @@ class DGHeightsDictionary {
     private var heights: [String: CGFloat] = [:]
 
     init() {
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(DGHeightsDictionary.deviceOrientationDidChange), name: UIDeviceOrientationDidChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(DGHeightsDictionary.deviceOrientationDidChange), name: NSNotification.Name.UIDeviceOrientationDidChange, object: nil)
     }
 
     deinit {
-        NSNotificationCenter.defaultCenter().removeObserver(self, name: UIDeviceOrientationDidChangeNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.UIDeviceOrientationDidChange, object: nil)
     }
 
     // MARK: - public
@@ -31,7 +31,7 @@ class DGHeightsDictionary {
     }
 
     internal func invalidateHeightForKey(key: String) -> CGFloat? {
-        return self.heights.removeValueForKey(key)
+        return self.heights.removeValue(forKey: key)
     }
 
     internal func invalidateAllHeightCache() {

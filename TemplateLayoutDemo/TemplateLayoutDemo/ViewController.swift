@@ -21,12 +21,12 @@ class ViewController: UITableViewController {
         self.tableView.dg_debugLogEnabled = true
 
         self.cacheModeSegmentControl.selectedSegmentIndex = 1
-
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) { () -> Void in
-            let path: String = NSBundle.mainBundle().pathForResource("Data", ofType: "json")!
+        
+        DispatchQueue.global().async {
+            let path: String = Bundle.main.path(forResource: "Data", ofType: "json")!
             let data: NSData = NSData(contentsOfFile: path)!
             do {
-                let dict = try NSJSONSerialization.JSONObjectWithData(data, options: .AllowFragments)
+                let dict = try JSONSerialization.jsonObject(with: data as Data, options: .allowFragments) as! [String: Any]
                 let array: [AnyObject] = dict["feed"] as! [AnyObject]
                 for item in array {
                     if let item = item as? NSDictionary {
@@ -36,17 +36,22 @@ class ViewController: UITableViewController {
             } catch {
                 print("serialization failed!!!")
             }
-            dispatch_async(dispatch_get_main_queue(), { () -> Void in
+            DispatchQueue.main.async {
                 self.feedList.append(self.jsonData)
                 self.tableView.reloadData()
-            })
+            }
+        }
+    }
+    
+    func delay(delay: Double, closure: @escaping () -> ()) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            closure()
         }
     }
 
     @IBAction func refreshControlAction(sender: UIRefreshControl) {
-        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(1 * Double(NSEC_PER_SEC)))
-        dispatch_after(delayTime, dispatch_get_main_queue()) {
-           self.feedList.removeAll()
+        delay(delay: 1 * Double(NSEC_PER_SEC)) {
+            self.feedList.removeAll()
             self.feedList.append(self.jsonData)
             self.tableView.reloadData()
             sender.endRefreshing()
@@ -54,25 +59,25 @@ class ViewController: UITableViewController {
     }
 
     @IBAction func rightNavigationItemAction(sender: AnyObject) {
-        let alert = UIAlertController(title: "Action", message: "message", preferredStyle: .ActionSheet)
-        alert.modalPresentationStyle = .Popover
-        let action1 = UIAlertAction(title: "Insert a row", style: .Destructive) { action in
+        let alert = UIAlertController(title: "Action", message: "message", preferredStyle: .actionSheet)
+        alert.modalPresentationStyle = .popover
+        let action1 = UIAlertAction(title: "Insert a row", style: .destructive) { action in
             self.inserRow()
         }
-        let action2 = UIAlertAction(title: "Insert a section", style: .Destructive) { action in
+        let action2 = UIAlertAction(title: "Insert a section", style: .destructive) { action in
             self.insertSection()
         }
-        let action3 = UIAlertAction(title: "Delete a section", style: .Destructive) { action in
+        let action3 = UIAlertAction(title: "Delete a section", style: .destructive) { action in
             self.deleteSection()
         }
-        let action4 = UIAlertAction(title: "Insert Rows At Index Paths", style: .Destructive) { action in
+        let action4 = UIAlertAction(title: "Insert Rows At Index Paths", style: .destructive) { action in
             self.insertRowsAtIndexPaths()
         }
-        let action5 = UIAlertAction(title: "Delete Rows At Index Paths", style: .Destructive) { action in
+        let action5 = UIAlertAction(title: "Delete Rows At Index Paths", style: .destructive) { action in
             self.deleteRowsAtIndexPaths()
         }
 
-        let cancel = UIAlertAction(title: "Cancel", style: .Cancel) { action in
+        let cancel = UIAlertAction(title: "Cancel", style: .cancel) { action in
 
         }
 
@@ -83,7 +88,7 @@ class ViewController: UITableViewController {
         alert.addAction(action4)
         alert.addAction(action5)
 
-        self.presentViewController(alert, animated: true, completion: nil)
+        self.present(alert, animated: true, completion: nil)
     }
 
     func randomItem() -> DGFeedItem {
@@ -98,21 +103,21 @@ class ViewController: UITableViewController {
         if self.feedList.count == 0 {
             self.insertSection()
         } else {
-            self.feedList[0].insert(self.randomItem(), atIndex: 0)
-            let indexPath: NSIndexPath = NSIndexPath(forRow: 0, inSection: 0)
-            self.tableView.insertRowsAtIndexPaths([indexPath], withRowAnimation: UITableViewRowAnimation.Automatic)
+            self.feedList[0].insert(self.randomItem(), at: 0)
+            let indexPath: IndexPath = IndexPath(row: 0, section: 0)
+            self.tableView.insertRows(at: [indexPath], with: .automatic)
         }
     }
 
     func insertSection() {
-        self.feedList.insert([self.randomItem()], atIndex: 0)
-        self.tableView.insertSections(NSIndexSet(index: 0), withRowAnimation: UITableViewRowAnimation.Automatic)
+        self.feedList.insert([self.randomItem()], at: 0)
+        self.tableView.insertSections(IndexSet(integer: 0) as IndexSet, with: .automatic)
     }
 
     func deleteSection() {
         if self.feedList.count > 0 {
-            self.feedList.removeAtIndex(0)
-            self.tableView.deleteSections(NSIndexSet(index: 0), withRowAnimation: UITableViewRowAnimation.Automatic)
+            self.feedList.remove(at: 0)
+            self.tableView.deleteSections(IndexSet(integer: 0) as IndexSet, with: .automatic)
         }
     }
 
@@ -128,16 +133,16 @@ class ViewController: UITableViewController {
             self.feedList[section].append(item)
         }
 
-        var indexPaths: [NSIndexPath] = []
+        var indexPaths: [IndexPath] = []
         for index in 0..<insertItems.count {
-            indexPaths.append(NSIndexPath(forRow: lastIndex + index, inSection: section))
+            indexPaths.append(IndexPath(row: lastIndex + index, section: section))
         }
 
         self.tableView.beginUpdates()
         if self.tableView.numberOfSections < section + 1 {
-            self.tableView.insertSections(NSIndexSet(index: section), withRowAnimation: .Automatic)
+            self.tableView.insertSections(IndexSet(integer: section), with: .automatic)
         } else {
-            self.tableView.insertRowsAtIndexPaths(indexPaths, withRowAnimation: .Automatic)
+            self.tableView.insertRows(at: indexPaths as [IndexPath], with: .automatic)
         }
         self.tableView.endUpdates()
     }
@@ -148,17 +153,17 @@ class ViewController: UITableViewController {
         guard self.feedList.count > section + 1 && self.feedList[section].count > 0 else { return }
 
         let row = self.feedList[section].count - 1
-        let indexPath = NSIndexPath(forRow: row, inSection: section)
+        let indexPath = IndexPath(row: row, section: section)
         self.feedList[section].removeLast()
 
         guard self.tableView.numberOfSections > section + 1 else { return }
 
         self.tableView.beginUpdates()
-        if self.tableView.numberOfRowsInSection(section) > 1 {
-            self.tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Automatic)
+        if self.tableView.numberOfRows(inSection: section) > 1 {
+            self.tableView.deleteRows(at: [indexPath], with: .automatic)
         } else {
-            self.feedList.removeAtIndex(section)
-            self.tableView.deleteSections(NSIndexSet(index: section), withRowAnimation: .Automatic)
+            self.feedList.remove(at: section)
+            self.tableView.deleteSections(IndexSet(integer: section), with: .automatic)
         }
         self.tableView.endUpdates()
     }
@@ -166,59 +171,59 @@ class ViewController: UITableViewController {
 
 // MARK: - UITableViewDelegate
 extension ViewController {
-
-    override func numberOfSectionsInTableView(tableView: UITableView) -> Int {
+    
+    override func numberOfSections(in tableView: UITableView) -> Int {
         return self.feedList.count
     }
-
-    override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return self.feedList[section].count
-    }
-
-    override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell: DGFeedCell = tableView.dequeueReusableCellWithIdentifier("DGFeedCell", forIndexPath: indexPath) as! DGFeedCell
+    
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell: DGFeedCell = tableView.dequeueReusableCell(withIdentifier: "DGFeedCell", for: indexPath as IndexPath) as! DGFeedCell
         if indexPath.row % 2 == 0 {
-            cell.accessoryType = UITableViewCellAccessoryType.DisclosureIndicator
+            cell.accessoryType = UITableViewCellAccessoryType.disclosureIndicator
         } else {
-            cell.accessoryType = UITableViewCellAccessoryType.Checkmark
+            cell.accessoryType = UITableViewCellAccessoryType.checkmark
         }
-        cell.loadData(self.feedList[indexPath.section][indexPath.row])
+        cell.loadData(item: self.feedList[indexPath.section][indexPath.row])
         cell.setNeedsUpdateConstraints()
         cell.updateConstraintsIfNeeded()
-        return cell ?? UITableViewCell()
+        return cell
     }
 
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.feedList[section].count
+    }
 }
 
 // MARK: - UITableViewDelegate
 extension ViewController {
-    override func tableView(tableView: UITableView, heightForRowAtIndexPath indexPath: NSIndexPath) -> CGFloat {
+    
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         let mode: Int = self.cacheModeSegmentControl.selectedSegmentIndex
         switch mode {
         case 0:
-            return tableView.dg_heightForCellWithIdentifier("DGFeedCell", configuration: { (cell) -> Void in
+            return tableView.dg_heightForCellWithIdentifier(identifier: "DGFeedCell", configuration: { (cell) -> Void in
                 let cell = cell as! DGFeedCell
-                cell.loadData(self.feedList[indexPath.section][indexPath.row])
+                cell.loadData(item: self.feedList[indexPath.section][indexPath.row])
             })
         case 1:
-            return tableView.dg_heightForCellWithIdentifier("DGFeedCell", indexPath: indexPath,configuration: { (cell) -> Void in
+            return tableView.dg_heightForCellWithIdentifier(identifier: "DGFeedCell", indexPath: indexPath, configuration: { (cell) in
                 let cell = cell as! DGFeedCell
-                cell.loadData(self.feedList[indexPath.section][indexPath.row])
+                cell.loadData(item: self.feedList[indexPath.section][indexPath.row])
             })
         case 2:
-            return tableView.dg_heightForCellWithIdentifier("DGFeedCell", key: self.feedList[indexPath.section][indexPath.row].identifier,  configuration: { (cell) -> Void in
+            return tableView.dg_heightForCellWithIdentifier(identifier: "DGFeedCell", key: self.feedList[indexPath.section][indexPath.row].identifier, configuration: { (cell) in
                 let cell = cell as! DGFeedCell
-                cell.loadData(self.feedList[indexPath.section][indexPath.row])
+                cell.loadData(item: self.feedList[indexPath.section][indexPath.row])
             })
         default:
             return 0
         }
     }
-
-    override func tableView(tableView: UITableView, commitEditingStyle editingStyle: UITableViewCellEditingStyle, forRowAtIndexPath indexPath: NSIndexPath) {
-        if editingStyle == UITableViewCellEditingStyle.Delete {
-            self.feedList[indexPath.section].removeAtIndex(indexPath.row)
-            self.tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: UITableViewRowAnimation.Automatic)
+    
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == UITableViewCellEditingStyle.delete {
+            self.feedList[indexPath.section].remove(at: indexPath.row)
+            self.tableView.deleteRows(at: [indexPath as IndexPath], with: .automatic)
         }
     }
 }
